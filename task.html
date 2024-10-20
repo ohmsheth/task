@@ -1,0 +1,156 @@
+import React, { useState, useEffect } from 'react';
+
+const App = () => {
+  const [tasks, setTasks] = useState([]);
+  const [newTask, setNewTask] = useState('');
+  const [editingTask, setEditingTask] = useState(null);
+
+  useEffect(() => {
+    // Fetch tasks from the server (Replace with your API URL)
+    fetch('http://localhost:5000/api/tasks')
+      .then(response => response.json())
+      .then(data => setTasks(data));
+  }, []);
+
+  const handleAddTask = () => {
+    const task = { text: newTask, completed: false };
+
+    // Send new task to server
+    fetch('http://localhost:5000/api/tasks', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(task),
+    })
+      .then(response => response.json())
+      .then(newTask => {
+        setTasks([...tasks, newTask]);
+        setNewTask('');
+      });
+  };
+
+  const handleDeleteTask = (id) => {
+    // Delete task on server
+    fetch(`http://localhost:5000/api/tasks/${id}`, { method: 'DELETE' })
+      .then(() => {
+        setTasks(tasks.filter(task => task.id !== id));
+      });
+  };
+
+  const handleEditTask = (task) => {
+    setEditingTask(task);
+  };
+
+  const handleUpdateTask = () => {
+    // Update task on server
+    fetch(`http://localhost:5000/api/tasks/${editingTask.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(editingTask),
+    })
+      .then(() => {
+        setTasks(tasks.map(t => (t.id === editingTask.id ? editingTask : t)));
+        setEditingTask(null);
+      });
+  };
+
+  const toggleCompletion = (task) => {
+    const updatedTask = { ...task, completed: !task.completed };
+
+    // Update task completion status on server
+    fetch(`http://localhost:5000/api/tasks/${task.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updatedTask),
+    })
+      .then(() => {
+        setTasks(tasks.map(t => (t.id === task.id ? updatedTask : t)));
+      });
+  };
+
+  const containerStyle = {
+    maxWidth: '600px',
+    margin: '0 auto',
+    padding: '20px',
+    textAlign: 'center',
+  };
+
+  const inputContainerStyle = {
+    display: 'flex',
+    justifyContent: 'space-between',
+    marginBottom: '20px',
+  };
+
+  const inputStyle = {
+    width: '80%',
+    padding: '10px',
+    fontSize: '16px',
+  };
+
+  const buttonStyle = {
+    padding: '10px',
+    fontSize: '16px',
+  };
+
+  const taskItemStyle = {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '10px',
+  };
+
+  const completedTaskStyle = {
+    textDecoration: 'line-through',
+    color: 'gray',
+  };
+
+  return (
+    <div style={containerStyle}>
+      <h1>To-Do List</h1>
+      <div style={inputContainerStyle}>
+        <input
+          type="text"
+          value={newTask}
+          onChange={(e) => setNewTask(e.target.value)}
+          placeholder="Enter a new task"
+          style={inputStyle}
+        />
+        <button onClick={handleAddTask} style={buttonStyle}>Add Task</button>
+      </div>
+
+      {tasks.map(task => (
+        <div key={task.id} style={taskItemStyle}>
+          <input
+            type="checkbox"
+            checked={task.completed}
+            onChange={() => toggleCompletion(task)}
+          />
+          {editingTask && editingTask.id === task.id ? (
+            <input
+              type="text"
+              value={editingTask.text}
+              onChange={(e) => setEditingTask({ ...editingTask, text: e.target.value })}
+            />
+          ) : (
+            <span style={task.completed ? completedTaskStyle : {}}>{task.text}</span>
+          )}
+
+          {editingTask && editingTask.id === task.id ? (
+            <button onClick={handleUpdateTask} style={buttonStyle}>Update</button>
+          ) : (
+            <button onClick={() => handleEditTask(task)} style={buttonStyle}>Edit</button>
+          )}
+
+          <button onClick={() => handleDeleteTask(task.id)} style={buttonStyle}>Delete</button>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+export default App;
